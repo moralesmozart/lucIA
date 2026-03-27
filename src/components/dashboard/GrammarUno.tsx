@@ -24,9 +24,12 @@ function initialState(seed: number) {
   return { ...g, msg: null as string | null, won: false }
 }
 
+type TurnPhase = 'match' | 'chooseTable'
+
 export function GrammarUno() {
   const [seed, setSeed] = useState(11)
-  const [table, setTable] = useState<GrammarCard>(() => initialState(11).starter)
+  const [phase, setPhase] = useState<TurnPhase>('match')
+  const [table, setTable] = useState<GrammarCard | null>(() => initialState(11).starter)
   const [hand, setHand] = useState<GrammarCard[]>(() => initialState(11).hand)
   const [pile, setPile] = useState<GrammarCard[]>(() => initialState(11).pile)
   const [discardPile, setDiscardPile] = useState<GrammarCard[]>(() => initialState(11).discard)
@@ -39,6 +42,7 @@ export function GrammarUno() {
     const g = newGame(next)
     reshuffleNonce.current = 0
     setSeed(next)
+    setPhase('match')
     setTable(g.starter)
     setHand(g.hand)
     setPile(g.pile)
@@ -47,24 +51,50 @@ export function GrammarUno() {
     setWon(false)
   }
 
-  function play(card: GrammarCard) {
-    if (won) return
+  /** Paso 1: carta de la mano coincide con la mesa → ambas al descarte. */
+  function playMatch(card: GrammarCard) {
+    if (won || phase !== 'match' || !table) return
     if (card.label !== table.label) {
       setMsg('La carta debe compartir la misma estructura gramatical que la mesa.')
       return
     }
     setMsg(null)
-    setDiscardPile((d) => [...d, table])
+    setDiscardPile((d) => [...d, table, card])
+    setHand((h) => {
+      const next = h.filter((c) => c.id !== card.id)
+      if (next.length === 0) {
+        setWon(true)
+        setTable(null)
+      } else {
+        setTable(null)
+        setPhase('chooseTable')
+        setMsg('Las dos cartas van al descarte. Elegí una carta de tu mano para dejarla en la mesa.')
+      }
+      return next
+    })
+  }
+
+  /** Paso 2: nueva carta visible en la mesa (cualquiera de la mano). */
+  function placeTableFromHand(card: GrammarCard) {
+    if (won || phase !== 'chooseTable') return
     setTable(card)
     setHand((h) => {
       const next = h.filter((c) => c.id !== card.id)
       if (next.length === 0) setWon(true)
       return next
     })
+    setPhase('match')
+    setMsg(null)
+  }
+
+  function onHandCardClick(card: GrammarCard) {
+    if (won) return
+    if (phase === 'match') playMatch(card)
+    else placeTableFromHand(card)
   }
 
   function draw() {
-    if (won) return
+    if (won || phase === 'chooseTable') return
 
     let nextPile = [...pile]
     let nextDiscard = [...discardPile]
@@ -114,9 +144,9 @@ export function GrammarUno() {
         </button>
       </div>
       <p className="mt-2 text-sm text-lucia-ink/65">
-        Recibes {HAND_SIZE} cartas. Solo puedes bajar una carta si su <strong>color / estructura</strong> coincide
-        con la carta visible en la mesa (como el color en UNO). Las cartas jugadas van al descarte; cuando el mazo
-        se acaba, el descarte se baraja y sigues pudiendo robar.
+        Recibes {HAND_SIZE} cartas. Si juegas una carta que <strong>coincide en estructura</strong> con la mesa,
+        las <strong>dos</strong> van al descarte; después debes <strong>elegir</strong> una carta de tu mano para
+        volver a dejar la mesa. Cuando el mazo se acaba, el descarte se baraja y puedes robar.
       </p>
 
       {won && (
@@ -126,22 +156,31 @@ export function GrammarUno() {
           className="mt-4 flex items-center gap-3 rounded-2xl bg-lucia-gold/40 px-4 py-3 font-bold text-lucia-ink"
         >
           <Trophy className="h-8 w-8" />
-          ¡Ganaste la ronda demo! Las cartas “encadenaron” la misma estructura hasta el final.
+          ¡Ganaste la ronda demo! Vacíaste la mano con el nuevo ritmo de parejas y elección de mesa.
         </motion.div>
       )}
 
       <div className="mt-6 flex flex-col items-center gap-4 rounded-2xl border-2 border-dashed border-violet-300 bg-white/90 p-4 md:flex-row md:items-start md:justify-center">
         <div className="text-center">
           <p className="text-xs font-bold uppercase text-violet-600">Mazo</p>
-          <DrawPileStack count={drawTotal} disabled={won} onDraw={draw} />
+          <DrawPileStack count={drawTotal} disabled={won || phase === 'chooseTable'} onDraw={draw} />
           <p className="mt-1 text-[10px] text-lucia-ink/50">
             {pile.length} robo · {discardPile.length} descarte
           </p>
         </div>
         <div className="text-center">
           <p className="text-xs font-bold uppercase text-violet-600">Mesa</p>
-          <div className="mt-2 flex justify-center">
-            <UnoCard card={table} size="lg" />
+          <div className="mt-2 flex min-h-[280px] justify-center">
+            {table ? (
+              <UnoCard card={table} size="lg" />
+            ) : (
+              <div className="flex w-[200px] flex-col items-center justify-center rounded-xl border-2 border-dashed border-violet-400 bg-violet-50/80 px-4 py-6 text-center">
+                <p className="text-sm font-bold text-violet-800">Sin carta en la mesa</p>
+                <p className="mt-2 text-xs text-lucia-ink/65">
+                  Elegí una carta de tu mano para colocarla aquí.
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -152,15 +191,20 @@ export function GrammarUno() {
         <p className="text-xs font-bold uppercase text-lucia-ink/45">Tu mano</p>
         <div className="mt-3 flex flex-wrap justify-center gap-2 md:justify-start md:gap-3">
           {hand.map((c) => {
-            const playable = c.label === table.label
+            const canMatch = phase === 'match' && table !== null && c.label === table.label
+            const choosing = phase === 'chooseTable'
             return (
               <button
                 key={c.id}
                 type="button"
-                onClick={() => play(c)}
-                disabled={won}
-                className={`rounded-2xl transition focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-2 disabled:opacity-50 ${
-                  playable ? 'ring-2 ring-lucia-moss ring-offset-2 scale-[1.02]' : 'opacity-90 hover:opacity-100'
+                onClick={() => onHandCardClick(c)}
+                disabled={won || (phase === 'match' && table !== null && c.label !== table.label)}
+                className={`rounded-2xl transition focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-40 ${
+                  choosing
+                    ? 'ring-2 ring-amber-500 ring-offset-2 scale-[1.02] hover:opacity-100'
+                    : canMatch
+                      ? 'ring-2 ring-lucia-moss ring-offset-2 scale-[1.02] hover:opacity-100'
+                      : 'opacity-90 hover:opacity-100'
                 }`}
               >
                 <UnoCard card={c} size="sm" />
@@ -174,7 +218,7 @@ export function GrammarUno() {
         <button
           type="button"
           onClick={draw}
-          disabled={won || drawTotal === 0}
+          disabled={won || drawTotal === 0 || phase === 'chooseTable'}
           className="rounded-2xl border border-lucia-ink/15 px-5 py-2 text-sm font-bold hover:bg-white disabled:opacity-40"
         >
           Robar carta ({drawTotal} disponibles)
