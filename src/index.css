@@ -1,0 +1,28 @@
+@import 'tailwindcss';
+
+@theme {
+  --font-display: 'Fraunces', ui-serif, Georgia, serif;
+  --font-sans: 'Nunito', ui-sans-serif, system-ui, sans-serif;
+  --color-lucia-coral: #ff6b4a;
+  --color-lucia-gold: #f4c542;
+  --color-lucia-moss: #2d6a4f;
+  --color-lucia-sky: #4cc9f0;
+  --color-lucia-ink: #1a1523;
+  --color-lucia-cream: #fff8f0;
+  --color-lucia-lilac: #c8b8ff;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply antialiased text-lucia-ink bg-lucia-cream font-sans;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
