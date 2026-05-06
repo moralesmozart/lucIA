@@ -6,6 +6,7 @@ import {
   type Exercise,
   exercisesForLevel,
 } from '../../data/exercises'
+import { addAttempt, getStudentDisplayName } from '../../lib/luciaPersistence'
 
 const LEVELS: (Level | 'all')[] = ['all', 'A1', 'A2', 'B1', 'B2', 'C1', 'C2']
 
@@ -32,19 +33,35 @@ export function QuizBlock() {
     resetInputs()
   }
 
+  function exerciseSummary(exercise: Exercise): string {
+    if (exercise.kind === 'choice') return exercise.prompt.slice(0, 120)
+    if (exercise.kind === 'fill') return exercise.template.slice(0, 120)
+    return `Empareja (${exercise.left.length} ítems)`
+  }
+
   function check(exercise: Exercise) {
+    let ok = false
     if (exercise.kind === 'choice') {
       if (picked === null) return
-      setFeedback(picked === exercise.correctIndex ? 'ok' : 'no')
+      ok = picked === exercise.correctIndex
+      setFeedback(ok ? 'ok' : 'no')
     } else if (exercise.kind === 'fill') {
       const v = fillVal.trim().toLowerCase()
-      const ok = exercise.answers.some((a) => a.toLowerCase() === v)
+      ok = exercise.answers.some((a) => a.toLowerCase() === v)
       setFeedback(ok ? 'ok' : 'no')
     } else {
       if (matchSel.length !== exercise.left.length) return
-      const ok = matchSel.every((r, li) => r === exercise.solution[li])
+      ok = matchSel.every((r, li) => r === exercise.solution[li])
       setFeedback(ok ? 'ok' : 'no')
     }
+    addAttempt({
+      studentDisplayName: getStudentDisplayName(),
+      exerciseId: exercise.id,
+      exerciseSummary: exerciseSummary(exercise),
+      level: exercise.level,
+      correct: ok,
+      scorePercent: ok ? 100 : 0,
+    })
   }
 
   return (

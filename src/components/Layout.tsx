@@ -1,7 +1,7 @@
 import { Link, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useAuth } from '../context/AuthContext'
-import { Sparkles, LogIn, LogOut, LayoutDashboard } from 'lucide-react'
+import { Sparkles, LogIn, LogOut, LayoutDashboard, Shield } from 'lucide-react'
 
 /** Landing anchors work on GitHub Pages (/lucIA/#section) and locally (/#section). */
 function homeHash(id: string) {
@@ -10,9 +10,10 @@ function homeHash(id: string) {
 }
 
 export function Layout({ children }: { children: React.ReactNode }) {
-  const { isAuthed, logout } = useAuth()
+  const { isStudentAuthed, isAdminAuthed, logoutStudent } = useAuth()
   const loc = useLocation()
   const isApp = loc.pathname.startsWith('/app')
+  const isAdminZone = loc.pathname.startsWith('/admin') && loc.pathname !== '/admin/login'
 
   return (
     <div className="min-h-svh flex flex-col">
@@ -30,7 +31,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
             </span>
           </Link>
           <nav className="flex flex-wrap items-center gap-2 text-sm font-semibold">
-            {!isApp && (
+            {!isApp && !isAdminZone && (
               <>
                 <a
                   href={homeHash('por-que')}
@@ -52,7 +53,20 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 </a>
               </>
             )}
-            {isAuthed ? (
+            {isAdminZone && isAdminAuthed && (
+              <>
+                <Link
+                  to="/app"
+                  className="rounded-full px-3 py-1.5 text-lucia-ink/80 hover:bg-white/80"
+                >
+                  Ver aula (estudiante)
+                </Link>
+                <span className="rounded-full bg-lucia-ink/10 px-3 py-1.5 text-xs font-bold text-lucia-ink/70">
+                  Modo docente
+                </span>
+              </>
+            )}
+            {isStudentAuthed && (
               <>
                 <Link
                   to="/app"
@@ -63,20 +77,41 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 </Link>
                 <button
                   type="button"
-                  onClick={logout}
+                  onClick={() => logoutStudent()}
                   className="inline-flex items-center gap-1 rounded-full border border-lucia-ink/15 px-3 py-2 text-lucia-ink/80 hover:bg-white/80"
                 >
                   <LogOut className="h-4 w-4" />
                   Salir
                 </button>
               </>
-            ) : (
+            )}
+            {!isStudentAuthed && loc.pathname !== '/login' && !isAdminZone && (
               <Link
                 to="/login"
                 className="inline-flex items-center gap-1 rounded-full bg-lucia-coral px-4 py-2 text-white shadow-md shadow-lucia-coral/30"
               >
                 <LogIn className="h-4 w-4" />
                 Entrar
+              </Link>
+            )}
+            {isAdminAuthed && !loc.pathname.startsWith('/admin') && (
+              <Link
+                to="/admin/bandeja"
+                className="inline-flex items-center gap-1 rounded-full bg-lucia-ink px-4 py-2 text-white shadow-md"
+              >
+                <Shield className="h-4 w-4" />
+                Panel docente
+              </Link>
+            )}
+            {!isAdminAuthed &&
+              !isStudentAuthed &&
+              loc.pathname !== '/admin/login' && (
+              <Link
+                to="/admin/login"
+                className="inline-flex items-center gap-1 rounded-full border border-lucia-ink/20 bg-white/80 px-3 py-2 text-lucia-ink/80 hover:bg-white"
+              >
+                <Shield className="h-4 w-4" />
+                Acceso docente
               </Link>
             )}
           </nav>

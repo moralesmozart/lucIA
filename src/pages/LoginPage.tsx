@@ -8,14 +8,14 @@ const NATURE_VIDEO =
   'https://assets.mixkit.co/videos/preview/mixkit-forest-stream-in-the-sunlight-529-large-web.mp4'
 
 export function LoginPage() {
-  const { login, isAuthed } = useAuth()
+  const { loginStudent, isStudentAuthed } = useAuth()
   const nav = useNavigate()
   const loc = useLocation()
   const from = (loc.state as { from?: string } | null)?.from || '/app'
 
   useEffect(() => {
-    if (isAuthed) nav(from, { replace: true })
-  }, [isAuthed, from, nav])
+    if (isStudentAuthed) nav(from, { replace: true })
+  }, [isStudentAuthed, from, nav])
   const [user, setUser] = useState('')
   const [pass, setPass] = useState('')
   const [err, setErr] = useState(false)
@@ -23,7 +23,7 @@ export function LoginPage() {
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setErr(false)
-    if (login(user, pass)) {
+    if (loginStudent(user, pass)) {
       nav(from, { replace: true })
     } else {
       setErr(true)
@@ -109,6 +109,10 @@ export function LoginPage() {
             <ArrowRight className="h-5 w-5" />
           </button>
           <p className="mt-6 text-center text-sm text-lucia-ink/50">
+            <Link to="/admin/login" className="font-semibold text-lucia-ink/70 hover:underline">
+              Acceso docente (panel Lucía)
+            </Link>
+            {' · '}
             <Link to="/" className="font-semibold text-lucia-moss hover:underline">
               Volver al inicio
             </Link>

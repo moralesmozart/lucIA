@@ -1,11 +1,23 @@
 import { useState, type ReactNode } from 'react'
 import { motion } from 'framer-motion'
 import { BookMarked, ChevronLeft, ChevronRight, StickyNote } from 'lucide-react'
-import { FICTIONAL_BOOK } from '../../data/bookContent'
+import { getReadingVolumes } from '../../data/readingCatalog'
+import { usePersistListener } from '../../hooks/usePersistListener'
 
 export function BookReader() {
+  usePersistListener()
+  const volumes = getReadingVolumes()
+  const [volIdx, setVolIdx] = useState(0)
   const [page, setPage] = useState(0)
-  const p = FICTIONAL_BOOK[page]!
+
+  const volume = volumes[volIdx] ?? volumes[0]!
+  const pages = volume.pages
+  const p = pages[page]!
+
+  function switchVolume(nextIdx: number) {
+    setVolIdx(nextIdx)
+    setPage(0)
+  }
 
   return (
     <div className="rounded-3xl border border-lucia-ink/10 bg-gradient-to-br from-amber-50/80 to-white p-6 shadow-inner md:p-8">
@@ -15,24 +27,62 @@ export function BookReader() {
           Leer con notas de Lucía
         </h3>
         <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-900">
-          Libro demo · {FICTIONAL_BOOK.length} páginas
+          {volumes.length} volumen{volumes.length !== 1 ? 'es' : ''} · {pages.length} páginas
         </span>
       </div>
+
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <label className="text-xs font-bold uppercase text-lucia-ink/45">Libro</label>
+        <select
+          value={volIdx}
+          onChange={(e) => switchVolume(Number(e.target.value))}
+          className="max-w-[min(100%,280px)] rounded-full border border-lucia-ink/15 bg-white px-3 py-2 text-sm font-bold text-lucia-ink shadow-sm"
+        >
+          {volumes.map((v, i) => (
+            <option key={v.id} value={i}>
+              {v.title}
+              {v.source === 'custom' ? ' ✦' : ''}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {(volume.tags.length > 0 || volume.funFacts.length > 0) && (
+        <div className="mt-3 flex flex-wrap gap-2">
+          {volume.tags.map((t) => (
+            <span
+              key={t}
+              className="rounded-full bg-lucia-moss/15 px-3 py-1 text-xs font-bold text-lucia-moss"
+            >
+              {t}
+            </span>
+          ))}
+          {volume.funFacts.map((f, i) => (
+            <span
+              key={`f-${i}`}
+              className="rounded-full bg-violet-100 px-3 py-1 text-xs font-semibold text-violet-900"
+              title="Dato curioso"
+            >
+              💡 {f}
+            </span>
+          ))}
+        </div>
+      )}
+
       <p className="mt-2 text-sm text-lucia-ink/65">
-        Vista tipo “Kindle” con cajas al margen: gramática, registro y cultura. Más adelante Lucía subirá sus
-        propios materiales a lucIA.
+        Vista tipo “Kindle” con cajas al margen: gramática, registro y cultura. Los libros marcados con ✦ los publica el equipo desde el panel.
       </p>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-5">
         <motion.article
-          key={p.page}
+          key={`${volume.id}-${p.page}`}
           initial={{ opacity: 0.5 }}
           animate={{ opacity: 1 }}
           className="lg:col-span-3 rounded-2xl bg-white p-6 shadow-md ring-1 ring-lucia-ink/5"
         >
           <header className="border-b border-lucia-ink/10 pb-3">
             <p className="text-xs font-bold uppercase tracking-wider text-amber-700">
-              Página {p.page} / {FICTIONAL_BOOK.length}
+              Página {p.page} / {pages.length}
             </p>
             <h4 className="font-display text-2xl font-bold text-lucia-ink">{p.title}</h4>
           </header>
@@ -55,8 +105,8 @@ export function BookReader() {
             </button>
             <button
               type="button"
-              disabled={page >= FICTIONAL_BOOK.length - 1}
-              onClick={() => setPage((x) => Math.min(FICTIONAL_BOOK.length - 1, x + 1))}
+              disabled={page >= pages.length - 1}
+              onClick={() => setPage((x) => Math.min(pages.length - 1, x + 1))}
               className="inline-flex items-center gap-1 rounded-xl bg-lucia-moss px-4 py-2 text-sm font-bold text-white disabled:opacity-30"
             >
               Siguiente

@@ -3,6 +3,7 @@ import { QuizBlock } from '../components/dashboard/QuizBlock'
 import { BookReader } from '../components/dashboard/BookReader'
 import { GrammarUno } from '../components/dashboard/GrammarUno'
 import { CalendarBlock } from '../components/dashboard/CalendarBlock'
+import { StudentIdentityBar } from '../components/dashboard/StudentIdentityBar'
 
 const NATURE_VIDEO =
   'https://assets.mixkit.co/videos/preview/mixkit-forest-stream-in-the-sunlight-529-large-web.mp4'
@@ -33,6 +34,7 @@ export function DashboardPage() {
       </div>
 
       <div className="mx-auto max-w-6xl space-y-12 px-4 py-10">
+        <StudentIdentityBar />
         <WritingBlock />
         <QuizBlock />
         <section className="space-y-6">
